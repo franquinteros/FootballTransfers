@@ -125,6 +125,25 @@ public class ClubController {
         return ResponseEntity.ok(clubService.obtenerTopClubesPorPresupuesto(limit));
     }
     
+    @GetMapping("/top-jugadores/{limit}")
+    public ResponseEntity<List<ClubEntity>> obtenerTopClubesPorNumeroJugadores(@PathVariable Integer limit) {
+        return ResponseEntity.ok(clubService.obtenerTopClubesPorNumeroJugadores(limit));
+    }
+    
+    @GetMapping("/valor-plantilla/{nombreClub}")
+    public ResponseEntity<?> obtenerValorTotalPlantilla(@PathVariable String nombreClub) {
+        try {
+            Double valor = clubService.obtenerValorTotalPlantilla(nombreClub);
+            return ResponseEntity.ok(Map.of(
+                "club", nombreClub,
+                "valorTotalPlantilla", valor
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", e.getMessage()));
+        }
+    }
+    
     // ===== ACTUALIZACIONES DE PRESUPUESTO =====
     
     @PatchMapping("/{nombre}/presupuesto")
@@ -169,7 +188,7 @@ public class ClubController {
     // ===== ALGORITMOS COMPLEJOS =====
     
     /**
-     * BACKTRACKING - Formación óptima
+     * BACKTRACKING - Formación óptima básica
      * Endpoint: GET /api/clubes/{nombre}/formacion-optima
      */
     @GetMapping("/{nombreClub}/formacion-optima")
@@ -177,23 +196,104 @@ public class ClubController {
             @PathVariable String nombreClub,
             @RequestParam(defaultValue = "4-3-3") String formacion) {
         try {
-            List<JugadorEntity> escuadra = clubService.obtenerEscuadraOptima(nombreClub, formacion);
-            
-            double valorTotal = escuadra.stream()
-                .mapToDouble(j -> j.getValorMercado() != null ? j.getValorMercado() : 0.0)
-                .sum();
-            
-            return ResponseEntity.ok(Map.of(
-                "club", nombreClub,
-                "formacion", formacion,
-                "algoritmo", "Backtracking",
-                "jugadores", escuadra,
-                "totalJugadores", escuadra.size(),
-                "valorTotalMercado", valorTotal
-            ));
+            Map<String, Object> resultado = clubService.obtenerEscuadraOptima(nombreClub, formacion);
+            return ResponseEntity.ok(resultado);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(Map.of("error", e.getMessage()));
         }
+    }
+    
+    /**
+     * BACKTRACKING AVANZADO - Formación óptima con presupuesto
+     * Endpoint: GET /api/clubes/{nombre}/formacion-optima-presupuesto
+     */
+    @GetMapping("/{nombreClub}/formacion-optima-presupuesto")
+    public ResponseEntity<?> obtenerEscuadraOptimaConPresupuesto(
+            @PathVariable String nombreClub,
+            @RequestParam(defaultValue = "4-3-3") String formacion,
+            @RequestParam(required = false) Double presupuesto) {
+        try {
+            // Si no se proporciona presupuesto, usar el del club
+            if (presupuesto == null) {
+                ClubEntity club = clubService.obtenerClubPorNombre(nombreClub)
+                    .orElseThrow(() -> new RuntimeException("Club no encontrado"));
+                presupuesto = club.getPresupuesto() != null ? club.getPresupuesto() : 100000000.0;
+            }
+            
+            Map<String, Object> resultado = clubService.obtenerEscuadraOptimaConPresupuesto(
+                nombreClub, formacion, presupuesto);
+            
+            return ResponseEntity.ok(resultado);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", e.getMessage()));
+        }
+    }
+    
+    /**
+     * BACKTRACKING - Múltiples formaciones comparativas
+     * Endpoint: GET /api/clubes/{nombre}/comparar-formaciones
+     */
+    @GetMapping("/{nombreClub}/comparar-formaciones")
+    public ResponseEntity<?> compararFormaciones(
+            @PathVariable String nombreClub,
+            @RequestParam(defaultValue = "100000000") Double presupuesto) {
+        try {
+            String[] formaciones = {"4-3-3", "4-4-2", "3-5-2", "4-2-3-1", "3-4-3"};
+            Map<String, Object> comparativa = new java.util.HashMap<>();
+            comparativa.put("club", nombreClub);
+            comparativa.put("presupuesto", presupuesto);
+            comparativa.put("algoritmo", "Backtracking Comparativo");
+            
+            List<Map<String, Object>> resultados = new java.util.ArrayList<>();
+            
+            for (String formacion : formaciones) {
+                try {
+                    Map<String, Object> resultado = clubService.obtenerEscuadraOptimaConPresupuesto(
+                        nombreClub, formacion, presupuesto);
+                    
+                    resultados.add(Map.of(
+                        "formacion", formacion,
+                        "valorTotal", resultado.get("valorTotal"),
+                        "costoTotal", resultado.get("costoTotal"),
+                        "ratingTotal", resultado.get("ratingTotal"),
+                        "jugadoresNuevos", resultado.get("jugadoresNuevos"),
+                        "totalJugadores", resultado.get("escuadra") != null ? 
+                            ((List<?>) resultado.get("escuadra")).size() : 0
+                    ));
+                } catch (Exception e) {
+                    resultados.add(Map.of(
+                        "formacion", formacion,
+                        "error", e.getMessage()
+                    ));
+                }
+            }
+            
+            comparativa.put("resultados", resultados);
+            return ResponseEntity.ok(comparativa);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", e.getMessage()));
+        }
+    }
+    
+    // ===== CONSULTAS ADICIONALES =====
+    
+    @GetMapping("/rango-presupuesto")
+    public ResponseEntity<List<ClubEntity>> buscarPorRangoPresupuesto(
+            @RequestParam Double min,
+            @RequestParam Double max) {
+        return ResponseEntity.ok(clubService.buscarPorRangoPresupuesto(min, max));
+    }
+    
+    @GetMapping("/ligas-top/{nivelMinimo}")
+    public ResponseEntity<List<ClubEntity>> buscarClubesEnLigasTopNivel(@PathVariable Integer nivelMinimo) {
+        return ResponseEntity.ok(clubService.buscarClubesEnLigasTopNivel(nivelMinimo));
+    }
+    
+    @GetMapping("/ordenados-fundacion")
+    public ResponseEntity<List<ClubEntity>> obtenerClubesOrdenadosPorFundacion() {
+        return ResponseEntity.ok(clubService.obtenerClubesOrdenadosPorFundacion());
     }
 }

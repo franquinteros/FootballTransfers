@@ -129,38 +129,47 @@ public class AgenteService {
      * según alguna métrica (ej. maximizar comisión o balancear carga).
      */
     public Map<AgenteEntity, List<JugadorEntity>> asignarJugadoresAgentesGreedy() {
-        List<JugadorEntity> jugadoresLibres = jugadorRepository.findJugadoresLibres();
-        List<AgenteEntity> agentes = agenteRepository.findAll();
+    List<JugadorEntity> jugadoresLibres = jugadorRepository.findJugadoresLibres();
+    List<AgenteEntity> agentes = agenteRepository.findAll();
+    
+    if (agentes.isEmpty()) {
+        return new HashMap<>();
+    }
+    
+    // Ordenar jugadores por valor de mercado (mayor valor primero)
+    jugadoresLibres.sort(Comparator.comparing(
+        j -> j.getValorMercado() != null ? j.getValorMercado() : 0.0, 
+        Comparator.reverseOrder()
+    ));
+    
+    // Inicializar el mapa de asignación
+    Map<AgenteEntity, List<JugadorEntity>> asignacion = new HashMap<>();
+    for (AgenteEntity agente : agentes) {
+        asignacion.put(agente, new ArrayList<>());
+    }
+    
+    // Algoritmo Greedy: asignar cada jugador al agente con menos carga actual
+    for (JugadorEntity jugador : jugadoresLibres) {
+        // Encontrar el agente con menor carga (incluyendo asignaciones nuevas)
+        AgenteEntity agenteMenosCargado = null;
+        int minCarga = Integer.MAX_VALUE;
         
-        // Ordenar agentes por cantidad actual de jugadores (menos cargados primero)
-        agentes.sort(Comparator.comparingInt(a -> a.getJugadores().size()));
-        
-        // Ordenar jugadores por valor de mercado (mayor valor primero)
-        jugadoresLibres.sort(Comparator.comparing(JugadorEntity::getValorMercado).reversed());
-        
-        Map<AgenteEntity, List<JugadorEntity>> asignacion = new HashMap<>();
-        
-        // Inicializar la asignación
         for (AgenteEntity agente : agentes) {
-            asignacion.put(agente, new ArrayList<>());
+            // Carga actual = jugadores existentes + jugadores ya asignados en esta ejecución
+            int cargaActual = agente.getJugadores().size() + asignacion.get(agente).size();
+            
+            if (cargaActual < minCarga) {
+                minCarga = cargaActual;
+                agenteMenosCargado = agente;
+            }
         }
         
-        // Algoritmo Greedy: asignar cada jugador al agente con menos carga actual
-        for (JugadorEntity jugador : jugadoresLibres) {
-            AgenteEntity agenteMenosCargado = agentes.get(0);
-            int minCarga = asignacion.get(agenteMenosCargado).size() + agenteMenosCargado.getJugadores().size();
-            
-            for (AgenteEntity agente : agentes) {
-                int cargaActual = asignacion.get(agente).size() + agente.getJugadores().size();
-                if (cargaActual < minCarga) {
-                    minCarga = cargaActual;
-                    agenteMenosCargado = agente;
-                }
-            }
-            
+        // Asignar el jugador al agente menos cargado
+        if (agenteMenosCargado != null) {
             asignacion.get(agenteMenosCargado).add(jugador);
         }
-        
-        return asignacion;
+    }
+    
+    return asignacion;
     }
 }

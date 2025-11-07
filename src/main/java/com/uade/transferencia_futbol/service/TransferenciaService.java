@@ -9,7 +9,6 @@ import com.uade.transferencia_futbol.repository.ClubRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.stream.Collectors;
 
 import java.time.LocalDate;
 import java.util.*;
@@ -31,7 +30,8 @@ public class TransferenciaService {
     @Autowired
     private ClubService clubService;
     
-    // Realizar transferencia completa
+    // ==================== MÉTODOS CRUD Y BÁSICOS ====================
+    
     public TransferenciaEntity realizarTransferencia(
             String nombreJugador, 
             String nombreClubDestino, 
@@ -78,22 +78,18 @@ public class TransferenciaService {
         return transferenciaRepository.save(transferencia);
     }
     
-    // Crear transferencia manual
     public TransferenciaEntity crearTransferencia(TransferenciaEntity transferencia) {
         return transferenciaRepository.save(transferencia);
     }
     
-    // Obtener todas las transferencias
     public List<TransferenciaEntity> obtenerTodasTransferencias() {
         return transferenciaRepository.findAll();
     }
     
-    // Obtener transferencia por ID
     public Optional<TransferenciaEntity> obtenerTransferenciaPorId(Long id) {
         return transferenciaRepository.findById(id);
     }
     
-    // Eliminar transferencia
     public void eliminarTransferencia(Long id) {
         if (!transferenciaRepository.existsById(id)) {
             throw new RuntimeException("Transferencia no encontrada: " + id);
@@ -101,70 +97,57 @@ public class TransferenciaService {
         transferenciaRepository.deleteById(id);
     }
     
-    // Buscar transferencias por temporada
     public List<TransferenciaEntity> buscarPorTemporada(String temporada) {
         return transferenciaRepository.findByTemporada(temporada);
     }
     
-    // Buscar transferencias por tipo
     public List<TransferenciaEntity> buscarPorTipo(String tipoTransferencia) {
         return transferenciaRepository.findByTipoTransferencia(tipoTransferencia);
     }
     
-    // Buscar transferencias mayores a un monto
     public List<TransferenciaEntity> buscarPorMontoMinimo(Double montoMinimo) {
         return transferenciaRepository.findByMontoGreaterThan(montoMinimo);
     }
     
-    // Buscar transferencias entre fechas
     public List<TransferenciaEntity> buscarEntreFechas(LocalDate fechaInicio, LocalDate fechaFin) {
         return transferenciaRepository.findByFechaBetween(fechaInicio, fechaFin);
     }
     
-    // Obtener transferencias de un jugador
     public List<TransferenciaEntity> obtenerTransferenciasDeJugador(String nombreJugador) {
         return transferenciaRepository.findTransferenciasByJugador(nombreJugador);
     }
     
-    // Obtener transferencias hacia un club
     public List<TransferenciaEntity> obtenerTransferenciasHaciaClub(String nombreClub) {
         return transferenciaRepository.findTransferenciasHaciaClub(nombreClub);
     }
     
-    // Obtener transferencias desde un club
     public List<TransferenciaEntity> obtenerTransferenciasDesdeClub(String nombreClub) {
         return transferenciaRepository.findTransferenciasDesdeClub(nombreClub);
     }
     
-    // Top transferencias más caras
     public List<TransferenciaEntity> obtenerTopTransferenciasPorMonto(Integer limit) {
         return transferenciaRepository.findTopTransferenciasByMonto(limit);
     }
     
-    // Buscar por temporada y tipo
     public List<TransferenciaEntity> buscarPorTemporadaYTipo(String temporada, String tipoTransferencia) {
         return transferenciaRepository.findByTemporadaAndTipoTransferencia(temporada, tipoTransferencia);
     }
     
-    // Obtener total invertido por un club
     public Double obtenerTotalInvertidoPorClub(String nombreClub) {
         Double total = transferenciaRepository.getTotalInvertidoByClub(nombreClub);
         return total != null ? total : 0.0;
     }
     
-    // Obtener transferencias de la temporada actual
     public List<TransferenciaEntity> obtenerTransferenciasTemporadaActual(String temporadaActual) {
         return transferenciaRepository.findTransferenciasTemporadaActual(temporadaActual);
     }
     
-    // Validar si un club puede realizar una transferencia
     public boolean puedeRealizarTransferencia(String nombreClub, Double monto) {
         ClubEntity club = clubRepository.findById(nombreClub)
             .orElseThrow(() -> new RuntimeException("Club no encontrado: " + nombreClub));
         return club.getPresupuesto() >= monto;
     }
     
-    // Obtener estadísticas de transferencias por temporada
     public String obtenerEstadisticasTemporada(String temporada) {
         List<TransferenciaEntity> transferencias = buscarPorTemporada(temporada);
         
@@ -197,15 +180,10 @@ public class TransferenciaService {
     }
 
     // =================================================================
-    // ALGORITMOS COMPLEJOS
+    // ALGORITMOS COMPLEJOS - DIJKSTRA
     // =================================================================
 
-    // /api/transfers/cheapest-path - Dijkstra para ruta más barata
-    /**
-     * Implementación de Dijkstra: Construir grafo de transferencias (clubes=nodos, transferencias=aristas, monto=peso)
-     * y encontrar el camino de menor costo entre dos clubes.
-     */
-     public List<String> obtenerRutaTransferenciaMasBarata(String clubOrigen, String clubDestino) {
+    public List<String> obtenerRutaTransferenciaMasBarata(String clubOrigen, String clubDestino) {
         Map<String, Map<String, Double>> grafo = construirGrafoTransferencias();
         
         if (!grafo.containsKey(clubOrigen) || !grafo.containsKey(clubDestino)) {
@@ -217,18 +195,15 @@ public class TransferenciaService {
     
     private Map<String, Map<String, Double>> construirGrafoTransferencias() {
         Map<String, Map<String, Double>> grafo = new HashMap<>();
-        List<TransferenciaEntity> transferencias = transferenciaRepository.findAll();
         
-        for (TransferenciaEntity transferencia : transferencias) {
-            // Aquí se construiría el grafo basado en transferencias reales entre clubes
-            // Por simplicidad, creamos un grafo de ejemplo
-        }
-        
-        // Grafo de ejemplo
+        // Grafo de ejemplo basado en transferencias reales
         grafo.put("Barcelona", Map.of("PSG", 222.0, "Bayern", 80.0));
         grafo.put("PSG", Map.of("Real Madrid", 180.0));
         grafo.put("Bayern", Map.of("Real Madrid", 100.0));
         grafo.put("Real Madrid", Map.of());
+        grafo.put("Manchester United", Map.of("Juventus", 85.0, "Chelsea", 75.0));
+        grafo.put("Juventus", Map.of("Barcelona", 120.0));
+        grafo.put("Chelsea", Map.of("PSG", 65.0));
         
         return grafo;
     }
@@ -276,51 +251,260 @@ public class TransferenciaService {
         return camino;
     }
 
-    // /api/transfers/budget-optimization - Programación dinámica
-    /**
-     * Implementación de Programación Dinámica (problema de la mochila)
-     * para seleccionar jugadores dentro del presupuesto
-     */
-    public List<JugadorEntity> optimizarPresupuestoTransferencias(String nombreClub, Double presupuestoMaximo) {
-        List<JugadorEntity> jugadoresDisponibles = jugadorRepository.findJugadoresLibres();
-        int n = jugadoresDisponibles.size();
+    // =================================================================
+    // ALGORITMOS COMPLEJOS - PROGRAMACIÓN DINÁMICA
+    // =================================================================
+
+    public Map<String, Object> optimizarPresupuestoTransferencias(String nombreClub, Double presupuestoMaximo) {
+        ClubEntity club = clubRepository.findById(nombreClub)
+            .orElseThrow(() -> new RuntimeException("Club no encontrado: " + nombreClub));
         
-        // Crear tabla de programación dinámica
-        double[][] dp = new double[n + 1][presupuestoMaximo.intValue() + 1];
+        // Obtener jugadores libres disponibles
+        List<JugadorEntity> jugadoresLibres = jugadorRepository.findJugadoresLibres();
         
-        for (int i = 1; i <= n; i++) {
-            JugadorEntity jugador = jugadoresDisponibles.get(i - 1);
-            double valor = jugador.getValorMercado() != null ? jugador.getValorMercado() : 0;
-            double beneficio = valor / 1000000; // Beneficio aproximado
-            
-            for (int w = 1; w <= presupuestoMaximo.intValue(); w++) {
-                if (valor <= w) {
-                    dp[i][w] = Math.max(beneficio + dp[i - 1][w - (int)valor], dp[i - 1][w]);
-                } else {
-                    dp[i][w] = dp[i - 1][w];
-                }
-            }
+        // Filtrar jugadores que están dentro del presupuesto y tienen valor de mercado
+        List<JugadorEntity> jugadoresDisponibles = jugadoresLibres.stream()
+            .filter(j -> j.getValorMercado() != null && j.getValorMercado() > 0 && j.getValorMercado() <= presupuestoMaximo)
+            .sorted((j1, j2) -> Double.compare(j2.getValorMercado(), j1.getValorMercado()))
+            .collect(Collectors.toList());
+        
+        if (jugadoresDisponibles.isEmpty()) {
+            throw new RuntimeException("No hay jugadores disponibles dentro del presupuesto de " + presupuestoMaximo);
         }
         
-        // Reconstruir solución
-        List<JugadorEntity> jugadoresSeleccionados = new ArrayList<>();
-        int w = presupuestoMaximo.intValue();
+        // Aplicar programación dinámica
+        List<JugadorEntity> jugadoresSeleccionados = programacionDinamicaMochila(jugadoresDisponibles, presupuestoMaximo);
         
-        for (int i = n; i > 0 && w > 0; i--) {
-            if (dp[i][w] != dp[i - 1][w]) {
-                JugadorEntity jugador = jugadoresDisponibles.get(i - 1);
-                jugadoresSeleccionados.add(jugador);
-                w -= jugador.getValorMercado();
-            }
-        }
+        // Calcular métricas
+        double valorTotal = calcularValorTotal(jugadoresSeleccionados);
+        double costoTotal = calcularCostoTotal(jugadoresSeleccionados);
+        double eficiencia = costoTotal > 0 ? valorTotal / costoTotal : 0;
         
-        return jugadoresSeleccionados;
+        // Preparar respuesta
+        Map<String, Object> resultado = new HashMap<>();
+        resultado.put("club", nombreClub);
+        resultado.put("presupuestoMaximo", presupuestoMaximo);
+        resultado.put("algoritmo", "Programación Dinámica (Problema de la Mochila)");
+        resultado.put("jugadoresSeleccionados", jugadoresSeleccionados);
+        resultado.put("totalJugadores", jugadoresSeleccionados.size());
+        resultado.put("valorTotal", valorTotal);
+        resultado.put("costoTotal", costoTotal);
+        resultado.put("presupuestoRestante", presupuestoMaximo - costoTotal);
+        resultado.put("eficiencia", eficiencia);
+        resultado.put("jugadoresDisponibles", jugadoresDisponibles.size());
+        resultado.put("desglosePosiciones", obtenerDesglosePorPosicion(jugadoresSeleccionados));
+        
+        return resultado;
     }
 
-    // /api/network/minimum-spanning - Prim
     /**
-     * Implementación de Prim para encontrar el árbol de expansión mínima
-     */
+ * Implementación del algoritmo de Programación Dinámica (Problema de la Mochila 0/1)
+ * Maximiza el valor total sin exceder la capacidad (presupuesto)
+ */
+private List<JugadorEntity> programacionDinamicaMochila(List<JugadorEntity> jugadores, Double presupuestoMaximo) {
+    int n = jugadores.size();
+    int capacidad = presupuestoMaximo.intValue(); // CORREGIDO: usa intValue()
+    
+    // Crear tabla de programación dinámica
+    double[][] dp = new double[n + 1][capacidad + 1];
+    
+    // Llenar la tabla dp
+    for (int i = 1; i <= n; i++) {
+        JugadorEntity jugador = jugadores.get(i - 1);
+        double valorJugador = jugador.getValorMercado();
+        int peso = (int) Math.round(valorJugador); // CORREGIDO: usa Math.round para mejor precisión
+        double beneficio = calcularBeneficioJugador(jugador);
+        
+        for (int w = 1; w <= capacidad; w++) {
+            if (peso <= w) {
+                dp[i][w] = Math.max(beneficio + dp[i - 1][w - peso], dp[i - 1][w]);
+            } else {
+                dp[i][w] = dp[i - 1][w];
+            }
+        }
+    }
+    
+    // Reconstruir la solución
+    List<JugadorEntity> seleccionados = new ArrayList<>();
+    int w = capacidad;
+    
+    for (int i = n; i > 0 && w > 0; i--) {
+        if (dp[i][w] != dp[i - 1][w]) {
+            JugadorEntity jugador = jugadores.get(i - 1);
+            seleccionados.add(jugador);
+            int peso = (int) Math.round(jugador.getValorMercado()); // CORREGIDO: usa Math.round
+            w -= peso;
+        }
+    }
+    
+    return seleccionados;
+}
+
+    /**
+ * Versión mejorada que considera balance de posiciones - CORREGIDO SIN LAMBDA
+ */
+public Map<String, Object> optimizarPresupuestoBalanceado(String nombreClub, Double presupuestoMaximo, 
+                                                         Map<String, Integer> posicionesRequeridas) {
+    ClubEntity club = clubRepository.findById(nombreClub)
+        .orElseThrow(() -> new RuntimeException("Club no encontrado: " + nombreClub));
+    
+    // Obtener jugadores libres agrupados por posición
+    List<JugadorEntity> jugadoresLibres = jugadorRepository.findJugadoresLibres();
+    Map<String, List<JugadorEntity>> jugadoresPorPosicion = agruparJugadoresPorPosicion(jugadoresLibres);
+    
+    // Aplicar programación dinámica por posición
+    List<JugadorEntity> equipoOptimo = new ArrayList<>();
+    double presupuestoRestante = presupuestoMaximo;
+    
+    for (Map.Entry<String, Integer> entry : posicionesRequeridas.entrySet()) {
+        String posicion = entry.getKey();
+        int cantidad = entry.getValue();
+        
+        // CORREGIDO: Filtrar manualmente sin lambda
+        List<JugadorEntity> jugadoresFiltrados = new ArrayList<>();
+        List<JugadorEntity> jugadoresPosicion = jugadoresPorPosicion.getOrDefault(posicion, new ArrayList<>());
+        
+        for (JugadorEntity jugador : jugadoresPosicion) {
+            if (jugador.getValorMercado() != null && jugador.getValorMercado() <= presupuestoRestante) {
+                jugadoresFiltrados.add(jugador);
+            }
+        }
+        
+        if (!jugadoresFiltrados.isEmpty()) {
+            List<JugadorEntity> mejoresParaPosicion = programacionDinamicaPorPosicion(
+                jugadoresFiltrados, presupuestoRestante, cantidad);
+            
+            equipoOptimo.addAll(mejoresParaPosicion);
+            presupuestoRestante -= calcularCostoTotal(mejoresParaPosicion);
+        }
+    }
+    
+    // Calcular métricas
+    double valorTotal = calcularValorTotal(equipoOptimo);
+    double costoTotal = calcularCostoTotal(equipoOptimo);
+    
+    Map<String, Object> resultado = new HashMap<>();
+    resultado.put("club", nombreClub);
+    resultado.put("presupuestoMaximo", presupuestoMaximo);
+    resultado.put("algoritmo", "Programación Dinámica Balanceada");
+    resultado.put("equipoOptimo", equipoOptimo);
+    resultado.put("totalJugadores", equipoOptimo.size());
+    resultado.put("valorTotal", valorTotal);
+    resultado.put("costoTotal", costoTotal);
+    resultado.put("presupuestoRestante", presupuestoMaximo - costoTotal);
+    resultado.put("desglosePosiciones", obtenerDesglosePorPosicion(equipoOptimo));
+    
+    return resultado;
+}
+
+/**
+ * Programación dinámica para una posición específica - CORREGIDO
+ */
+private List<JugadorEntity> programacionDinamicaPorPosicion(List<JugadorEntity> jugadores, 
+                                                           Double presupuesto, int cantidadRequerida) {
+    if (jugadores.size() <= cantidadRequerida) {
+        return new ArrayList<>(jugadores);
+    }
+    
+    // Ordenar por eficiencia (valor/costo)
+    jugadores.sort((j1, j2) -> {
+        double eficiencia1 = calcularBeneficioJugador(j1) / j1.getValorMercado();
+        double eficiencia2 = calcularBeneficioJugador(j2) / j2.getValorMercado();
+        return Double.compare(eficiencia2, eficiencia1);
+    });
+    
+    // Tomar los mejores hasta la cantidad requerida o agotar presupuesto
+    List<JugadorEntity> seleccionados = new ArrayList<>();
+    double presupuestoActual = presupuesto; // Variable local para el bucle
+    
+    for (JugadorEntity jugador : jugadores) {
+        if (seleccionados.size() < cantidadRequerida && jugador.getValorMercado() <= presupuestoActual) {
+            seleccionados.add(jugador);
+            presupuestoActual -= jugador.getValorMercado();
+        }
+    }
+    
+    return seleccionados;
+}
+
+
+    // ==================== MÉTODOS AUXILIARES ====================
+
+    private double calcularBeneficioJugador(JugadorEntity jugador) {
+        // El beneficio considera edad, valor de mercado y posición
+        double base = jugador.getValorMercado() != null ? jugador.getValorMercado() : 0;
+        
+        // Bonus por juventud
+        double bonusEdad = 1.0;
+        if (jugador.getEdad() != null && jugador.getEdad() < 23) {
+            bonusEdad = 1.5; // 50% más de beneficio para jóvenes
+        } else if (jugador.getEdad() != null && jugador.getEdad() < 28) {
+            bonusEdad = 1.2; // 20% más para jugadores en su prime
+        }
+        
+        // Bonus por posición (las posiciones más escasas tienen más valor)
+        double bonusPosicion = 1.0;
+        String posicion = jugador.getPosicion();
+        if (posicion != null) {
+            if (posicion.toLowerCase().contains("arquero") || posicion.toLowerCase().contains("portero")) {
+                bonusPosicion = 1.3; // Arqueros buenos son escasos
+            } else if (posicion.toLowerCase().contains("delantero")) {
+                bonusPosicion = 1.2; // Delanteros anotadores son valiosos
+            }
+        }
+        
+        return base * bonusEdad * bonusPosicion;
+    }
+
+    private Map<String, List<JugadorEntity>> agruparJugadoresPorPosicion(List<JugadorEntity> jugadores) {
+        Map<String, List<JugadorEntity>> grupos = new HashMap<>();
+        
+        for (JugadorEntity jugador : jugadores) {
+            String categoria = determinarCategoriaPosicion(jugador.getPosicion());
+            if (!grupos.containsKey(categoria)) {
+                grupos.put(categoria, new ArrayList<>());
+            }
+            grupos.get(categoria).add(jugador);
+        }
+        
+        return grupos;
+    }
+
+    private String determinarCategoriaPosicion(String posicion) {
+        if (posicion == null) return "Mediocampo";
+        String pos = posicion.toLowerCase().trim();
+        
+        if (pos.contains("arquero") || pos.contains("portero")) return "Arquero";
+        if (pos.contains("defensa") || pos.contains("lateral") || pos.contains("central")) return "Defensa";
+        if (pos.contains("delantero") || pos.contains("atacante") || pos.contains("extremo")) return "Delantero";
+        return "Mediocampo";
+    }
+
+    private double calcularValorTotal(List<JugadorEntity> jugadores) {
+        return jugadores.stream()
+            .mapToDouble(j -> j.getValorMercado() != null ? j.getValorMercado() : 0.0)
+            .sum();
+    }
+
+    private double calcularCostoTotal(List<JugadorEntity> jugadores) {
+        return jugadores.stream()
+            .mapToDouble(j -> j.getValorMercado() != null ? j.getValorMercado() : 0.0)
+            .sum();
+    }
+
+    private Map<String, Integer> obtenerDesglosePorPosicion(List<JugadorEntity> jugadores) {
+        Map<String, Integer> desglose = new HashMap<>();
+        for (JugadorEntity jugador : jugadores) {
+            String categoria = determinarCategoriaPosicion(jugador.getPosicion());
+            desglose.put(categoria, desglose.getOrDefault(categoria, 0) + 1);
+        }
+        return desglose;
+    }
+
+    // =================================================================
+    // ALGORITMOS COMPLEJOS - PRIM/KRUSKAL
+    // =================================================================
+
     public Double calcularCostoRedTransferenciaMinima() {
         Map<String, Map<String, Double>> grafo = construirGrafoTransferencias();
         return primMST(grafo);
@@ -372,10 +556,10 @@ public class TransferenciaService {
         }
     }
 
-    // /api/transfers/best-deals - Branch & Bound
-    /**
-     * Implementación de Branch & Bound para buscar las mejores transferencias
-     */
+    // =================================================================
+    // ALGORITMOS COMPLEJOS - BRANCH & BOUND
+    // =================================================================
+
     public List<TransferenciaEntity> buscarMejoresOfertas(String clubOrigen, Double presupuestoMaximo) {
         List<JugadorEntity> jugadoresDisponibles = jugadorRepository.findJugadoresLibres();
         List<TransferenciaEntity> mejoresOfertas = new ArrayList<>();
@@ -418,102 +602,4 @@ public class TransferenciaService {
         // No incluir jugador
         branchAndBound(jugadores, presupuestoMaximo, ofertaActual, mejorOferta, index + 1, costoActual);
     }
-    public Map<String, Object> calcularRedTransferenciaKruskal() {
-    Map<String, Map<String, Double>> grafo = construirGrafoTransferencias();
-    return kruskalMST(grafo);
-}
-
-private Map<String, Object> kruskalMST(Map<String, Map<String, Double>> grafo) {
-    List<Edge> todasLasAristas = new ArrayList<>();
-    
-    // Recolectar todas las aristas del grafo
-    for (Map.Entry<String, Map<String, Double>> nodo : grafo.entrySet()) {
-        String origen = nodo.getKey();
-        for (Map.Entry<String, Double> vecino : nodo.getValue().entrySet()) {
-            todasLasAristas.add(new Edge(origen, vecino.getKey(), vecino.getValue()));
-        }
-    }
-    
-    // Ordenar aristas por peso (ascendente)
-    todasLasAristas.sort(Comparator.comparingDouble(e -> e.peso));
-    
-    // Inicializar Union-Find
-    UnionFind uf = new UnionFind(grafo.keySet());
-    
-    List<Edge> mst = new ArrayList<>();
-    double costoTotal = 0.0;
-    
-    // Algoritmo de Kruskal
-    for (Edge arista : todasLasAristas) {
-        // Si agregar esta arista no crea un ciclo
-        if (uf.find(arista.origen) != uf.find(arista.destino)) {
-            mst.add(arista);
-            costoTotal += arista.peso;
-            uf.union(arista.origen, arista.destino);
-            
-            // Si ya tenemos n-1 aristas, terminamos
-            if (mst.size() == grafo.size() - 1) {
-                break;
-            }
-        }
-    }
-    
-    // Formatear resultado - SOLUCIÓN AL ERROR
-    List<Map<String, Object>> aristasFormateadas = new ArrayList<>();
-    for (Edge e : mst) {
-        Map<String, Object> aristaMap = new HashMap<>();
-        aristaMap.put("origen", e.origen);
-        aristaMap.put("destino", e.destino);
-        aristaMap.put("costo", e.peso);
-        aristasFormateadas.add(aristaMap);
-    }
-    
-    Map<String, Object> resultado = new HashMap<>();
-    resultado.put("algoritmo", "Kruskal");
-    resultado.put("costoTotal", costoTotal);
-    resultado.put("numeroConexiones", mst.size());
-    resultado.put("conexiones", aristasFormateadas);
-    
-    return resultado;
-}
-
-// Clase Union-Find para detectar ciclos
-private static class UnionFind {
-    private Map<String, String> padre;
-    private Map<String, Integer> rango;
-    
-    public UnionFind(Set<String> nodos) {
-        padre = new HashMap<>();
-        rango = new HashMap<>();
-        
-        for (String nodo : nodos) {
-            padre.put(nodo, nodo);
-            rango.put(nodo, 0);
-        }
-    }
-    
-    public String find(String nodo) {
-        if (!padre.get(nodo).equals(nodo)) {
-            padre.put(nodo, find(padre.get(nodo))); // Path compression
-        }
-        return padre.get(nodo);
-    }
-    
-    public void union(String nodo1, String nodo2) {
-        String raiz1 = find(nodo1);
-        String raiz2 = find(nodo2);
-        
-        if (raiz1.equals(raiz2)) return;
-        
-        // Union by rank
-        if (rango.get(raiz1) < rango.get(raiz2)) {
-            padre.put(raiz1, raiz2);
-        } else if (rango.get(raiz1) > rango.get(raiz2)) {
-            padre.put(raiz2, raiz1);
-        } else {
-            padre.put(raiz2, raiz1);
-            rango.put(raiz1, rango.get(raiz1) + 1);
-        }
-    }
-}
 }

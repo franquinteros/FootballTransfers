@@ -1,7 +1,6 @@
 package com.uade.transferencia_futbol.controller;
 
 import com.uade.transferencia_futbol.entity.TransferenciaEntity;
-import com.uade.transferencia_futbol.entity.JugadorEntity;
 import com.uade.transferencia_futbol.service.TransferenciaService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -12,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/transferencias")
@@ -164,7 +164,6 @@ public class TransferenciaController {
     
     /**
      * DIJKSTRA - Ruta de transferencia más barata
-     * Endpoint: GET /api/transferencias/ruta-mas-barata
      */
     @GetMapping("/ruta-mas-barata")
     public ResponseEntity<?> obtenerRutaTransferenciaMasBarata(
@@ -186,78 +185,85 @@ public class TransferenciaController {
     }
     
     /**
-     * PROGRAMACIÓN DINÁMICA - Optimizar presupuesto (Problema de la mochila)
-     * Endpoint: GET /api/transferencias/optimizar-presupuesto
+     * PROGRAMACIÓN DINÁMICA - Optimización de presupuesto
      */
     @GetMapping("/optimizar-presupuesto")
-    public ResponseEntity<?> optimizarPresupuestoTransferencias(
+    public ResponseEntity<?> optimizarPresupuesto(
             @RequestParam String nombreClub,
             @RequestParam Double presupuestoMaximo) {
-        List<JugadorEntity> jugadores = transferenciaService.optimizarPresupuestoTransferencias(
-            nombreClub, presupuestoMaximo
-        );
-        
-        double valorTotal = jugadores.stream()
-            .mapToDouble(j -> j.getValorMercado() != null ? j.getValorMercado() : 0.0)
-            .sum();
-        
-        return ResponseEntity.ok(Map.of(
-            "algoritmo", "Programación Dinámica (Mochila)",
-            "club", nombreClub,
-            "presupuestoMaximo", presupuestoMaximo,
-            "jugadoresSeleccionados", jugadores,
-            "totalJugadores", jugadores.size(),
-            "valorTotalInversion", valorTotal
-        ));
+        try {
+            Map<String, Object> resultado = transferenciaService.optimizarPresupuestoTransferencias(
+                nombreClub, presupuestoMaximo);
+            return ResponseEntity.ok(resultado);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", e.getMessage()));
+        }
     }
     
     /**
-     * PRIM - Árbol de expansión mínima para red de transferencias
-     * Endpoint: GET /api/transferencias/red-minima-prim
+     * PROGRAMACIÓN DINÁMICA - Optimización balanceada
      */
-    @GetMapping("/red-minima-prim")
-    public ResponseEntity<?> calcularCostoRedTransferenciaMinima() {
-        Double costoTotal = transferenciaService.calcularCostoRedTransferenciaMinima();
-        return ResponseEntity.ok(Map.of(
-            "algoritmo", "Prim (MST)",
-            "descripcion", "Costo mínimo para conectar todos los clubes en la red de transferencias",
-            "costoTotal", costoTotal
-        ));
+    @GetMapping("/optimizar-presupuesto-balanceado")
+    public ResponseEntity<?> optimizarPresupuestoBalanceado(
+            @RequestParam String nombreClub,
+            @RequestParam Double presupuestoMaximo,
+            @RequestParam(defaultValue = "1") Integer arqueros,
+            @RequestParam(defaultValue = "4") Integer defensas,
+            @RequestParam(defaultValue = "4") Integer mediocampistas,
+            @RequestParam(defaultValue = "2") Integer delanteros) {
+        try {
+            Map<String, Integer> posicionesRequeridas = new HashMap<>();
+            posicionesRequeridas.put("Arquero", arqueros);
+            posicionesRequeridas.put("Defensa", defensas);
+            posicionesRequeridas.put("Mediocampo", mediocampistas);
+            posicionesRequeridas.put("Delantero", delanteros);
+            
+            Map<String, Object> resultado = transferenciaService.optimizarPresupuestoBalanceado(
+                nombreClub, presupuestoMaximo, posicionesRequeridas);
+            return ResponseEntity.ok(resultado);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", e.getMessage()));
+        }
     }
     
     /**
-     * KRUSKAL - Árbol de expansión mínima para red de transferencias
-     * Endpoint: GET /api/transferencias/red-minima-kruskal
+     * PRIM - Red mínima de transferencias
      */
-    @GetMapping("/red-minima-kruskal")
-    public ResponseEntity<?> calcularRedTransferenciaKruskal() {
-        Map<String, Object> resultado = transferenciaService.calcularRedTransferenciaKruskal();
-        return ResponseEntity.ok(resultado);
+    @GetMapping("/red-minima")
+    public ResponseEntity<?> calcularRedTransferenciaMinima() {
+        try {
+            Double costo = transferenciaService.calcularCostoRedTransferenciaMinima();
+            return ResponseEntity.ok(Map.of(
+                "algoritmo", "Prim",
+                "costoTotalRedMinima", costo
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", e.getMessage()));
+        }
     }
     
     /**
-     * BRANCH & BOUND - Buscar mejores ofertas de transferencias
-     * Endpoint: GET /api/transferencias/mejores-ofertas
+     * BRANCH & BOUND - Mejores ofertas
      */
     @GetMapping("/mejores-ofertas")
     public ResponseEntity<?> buscarMejoresOfertas(
             @RequestParam String clubOrigen,
             @RequestParam Double presupuestoMaximo) {
-        List<TransferenciaEntity> mejoresOfertas = transferenciaService.buscarMejoresOfertas(
-            clubOrigen, presupuestoMaximo
-        );
-        
-        double costoTotal = mejoresOfertas.stream()
-            .mapToDouble(t -> t.getMonto() != null ? t.getMonto() : 0.0)
-            .sum();
-        
-        return ResponseEntity.ok(Map.of(
-            "algoritmo", "Branch & Bound",
-            "clubOrigen", clubOrigen,
-            "presupuestoMaximo", presupuestoMaximo,
-            "mejoresOfertas", mejoresOfertas,
-            "totalOfertas", mejoresOfertas.size(),
-            "costoTotal", costoTotal
-        ));
+        try {
+            List<TransferenciaEntity> ofertas = transferenciaService.buscarMejoresOfertas(clubOrigen, presupuestoMaximo);
+            return ResponseEntity.ok(Map.of(
+                "algoritmo", "Branch & Bound",
+                "clubOrigen", clubOrigen,
+                "presupuestoMaximo", presupuestoMaximo,
+                "ofertas", ofertas,
+                "totalOfertas", ofertas.size()
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", e.getMessage()));
+        }
     }
 }

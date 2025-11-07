@@ -1,5 +1,7 @@
 package com.uade.transferencia_futbol.entity;
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import org.springframework.data.neo4j.core.schema.Id;
 import org.springframework.data.neo4j.core.schema.Node;
 import org.springframework.data.neo4j.core.schema.Property;
@@ -12,6 +14,7 @@ import static org.springframework.data.neo4j.core.schema.Relationship.Direction.
 import static org.springframework.data.neo4j.core.schema.Relationship.Direction.OUTGOING;
 
 @Node("Club")
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "nombre")
 public class ClubEntity {
     
     @Id

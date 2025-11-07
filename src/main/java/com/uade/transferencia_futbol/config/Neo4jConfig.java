@@ -3,16 +3,14 @@ package com.uade.transferencia_futbol.config;
 import org.neo4j.driver.Driver;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.neo4j.core.ReactiveDatabaseSelectionProvider;
-import org.springframework.data.neo4j.core.transaction.ReactiveNeo4jTransactionManager;
+import org.springframework.data.neo4j.core.transaction.Neo4jTransactionManager;
+import org.springframework.transaction.PlatformTransactionManager;
 
 @Configuration
 public class Neo4jConfig {
-    
+
     @Bean
-    public ReactiveNeo4jTransactionManager reactiveTransactionManager(
-            Driver driver,
-            ReactiveDatabaseSelectionProvider databaseSelectionProvider) {
-        return new ReactiveNeo4jTransactionManager(driver, databaseSelectionProvider);
+    public PlatformTransactionManager transactionManager(Driver driver) {
+        return new Neo4jTransactionManager(driver);
     }
 }
